@@ -1,66 +1,72 @@
 """
-Módulo de geração de grafos aleatórios.
-Simula a criação de um Knowledge Graph que pode representar
-um ambiente dinâmico de Reinforcement Learning.
+Módulo de geração de grafos alinhados ao paper.
+Simula a criação de um Knowledge Graph espacial com vizinhança de Manhattan.
 """
 import random
-from .graph import Graph
+from .graph import KnowledgeGraph
 
-def generate_graph(num_nodes, edges_per_node):
+def generate_graph_paper(num_nodes):
     """
-    Gera um grafo conectado aleatório.
+    Gera um KnowledgeGraph onde os nós são dispostos em uma grade
+    bidimensional e as arestas representam a vizinhança de Manhattan.
     
     Contexto Acadêmico:
-    - O grafo simula um Knowledge Graph onde nós representam estados,
-      entidades ou conceitos, e as arestas representam transições ou relações.
-    - Isso representa ambientes dinâmicos e complexos porque a geração
-      aleatória com conectividade variável imita a imprevisibilidade e 
-      a topologia de domínios abertos de Reinforcement Learning, onde agentes
-      inteligentes não conhecem toda a estrutura antecipadamente e precisam
-      explorar subgrafos para tomar decisões.
+    - O grafo simula um Knowledge Graph espacial onde cada nó representa 
+      estados, entidades ou conceitos específicos no espaço de estados do agente, 
+      e as arestas representam relações de adjacência ou transições possíveis.
+    - Isso representa ambientes dinâmicos e complexos porque a estrutura de grade 
+      com vizinhos restritos simula o comportamento de movimentação local e de 
+      exploração limitada de agentes inteligentes de Reinforcement Learning (RL), 
+      onde o agente precisa inferir e planejar localmente sob restrição de alcance (k-hop).
+    - Simula a topologia espacial do ambiente do paper do Stefano.
+    - Cada nó 'Entidade_i' mapeia para uma coordenada (x, y) na grade.
+    - Conectividade restrita a vizinhos ortogonais diretos (vizinhos de Manhattan).
     
     Args:
-        num_nodes (int): Quantidade de nós a serem gerados no grafo.
-        edges_per_node (int): Fator de densidade que influencia o número total de arestas.
-    
+        num_nodes (int): Número total de nós a serem gerados.
+        
     Returns:
-        Graph: O objeto grafo gerado.
+        KnowledgeGraph: O grafo espacial gerado.
     """
-    g = Graph()
+    kg = KnowledgeGraph()
     
     if num_nodes <= 0:
-        return g
+        return kg
         
-    # Adiciona nós base usando inteiros (0 até num_nodes - 1)
+    # Simula o tamanho de uma grade baseada no número de nós
+    # Ex: 10.000 nós correspondem a uma grade de 100x100
+    grid_size = int(num_nodes ** 0.5)
+    if grid_size == 0:
+        grid_size = 1
+    
+    # 1. Criar nós com posições espaciais
     for i in range(num_nodes):
-        g.add_node(i)
+        node_id = f"Entidade_{i}"
+        # Mapeia o ID linear para uma coordenada (x, y) na grade
+        x = i // grid_size
+        y = i % grid_size
+        kg.adicionar_no(node_id, x, y)
         
-    # Garantir que o grafo seja completamente conectado (sem ilhas)
-    # Criamos uma árvore geradora básica ligando todos os nós em um caminho embaralhado
-    nodes = list(range(num_nodes))
-    random.shuffle(nodes)
-    for i in range(len(nodes) - 1):
-        g.add_edge(nodes[i], nodes[i+1])
+    # 2. Criar arestas respeitando a vizinhança de Manhattan (Manhattan Neighbours)
+    for i in range(num_nodes):
+        node_id = f"Entidade_{i}"
+        x = i // grid_size
+        y = i % grid_size
         
-    # Calcular quantas arestas faltam para atingir a densidade desejada
-    # Uma árvore geradora tem num_nodes - 1 arestas
-    target_edges = (num_nodes * edges_per_node) // 2
-    current_edges = g.get_num_edges()
-    
-    attempts = 0
-    # Limite máximo para evitar loops infinitos caso o grafo atinja a capacidade máxima de arestas
-    max_attempts = num_nodes * edges_per_node * 5 
-    
-    # Adicionar nós aleatoriamente até atingir a densidade (cada nó terá múltiplos vizinhos)
-    while current_edges < target_edges and attempts < max_attempts:
-        u = random.randint(0, num_nodes - 1)
-        v = random.randint(0, num_nodes - 1)
-        
-        # Evitar auto-loops e checar se aresta já existe
-        if u != v and v not in g.get_neighbors(u):
-            g.add_edge(u, v)
-            current_edges += 1
-        
-        attempts += 1
-            
-    return g
+        # Vizinhos ortogonais possíveis na grade (Norte, Sul, Leste, Oeste)
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < grid_size and 0 <= ny < grid_size:
+                neighbor_idx = nx * grid_size + ny
+                if neighbor_idx < num_nodes:
+                    neighbor_id = f"Entidade_{neighbor_idx}"
+                    kg.adicionar_aresta(node_id, neighbor_id)
+                    
+    return kg
+
+def generate_graph(num_nodes, edges_per_node=None):
+    """
+    Wrapper de compatibilidade para a suite de benchmarks existente.
+    """
+    return generate_graph_paper(num_nodes)
+

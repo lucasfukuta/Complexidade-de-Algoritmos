@@ -35,10 +35,10 @@ def run_benchmark():
         graph = generate_graph(size, edges_per_node)
         
         # Iniciar no nó de índice 0
-        start_node = 0
+        start_node = f"Entidade_0"
         
         # Define um alvo distante (ou o último) para forçar o pior caso
-        target_node = size - 1 
+        target_node = f"Entidade_{size - 1}" 
         
         # Configuração de pipelines experimentais
         tests = [

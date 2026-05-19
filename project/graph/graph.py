@@ -60,3 +60,23 @@ class Graph:
         print(f"Total de Nós: {self.get_num_nodes()}")
         print(f"Total de Arestas: {self.get_num_edges()}")
         print("=============================")
+
+
+class KnowledgeGraph(Graph):
+    def __init__(self):
+        super().__init__()
+        self.positions = {}
+
+    def adicionar_no(self, node_id, x, y):
+        """
+        Adiciona um nó ao grafo com coordenadas espaciais (x, y).
+        """
+        self.add_node(node_id)
+        self.positions[node_id] = (x, y)
+
+    def adicionar_aresta(self, u, v):
+        """
+        Adiciona uma aresta não direcionada entre os nós u e v.
+        """
+        self.add_edge(u, v)
+
