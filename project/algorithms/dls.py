@@ -3,14 +3,15 @@ Módulo de Busca Limitada por Profundidade (Depth-Limited Search - DLS).
 """
 import time
 
-def dls_recursive(graph, current_node, target_node, limit, path, visited_count_ref):
+def dls_recursive(graph, current_node, target_node, limit, path, visited, visited_count_ref):
     """
     Função auxiliar recursiva que implementa a lógica do DLS k-hop.
     Mantém o caminho percorrido para evitar ciclos e realiza backtracking.
     """
-    # Adiciona nó ao caminho atual (funciona como controle de visitas locais para ciclos)
+    # Adiciona nó ao caminho atual e ao conjunto de visitados
     path.append(current_node)
-    # Incrementa a referência de contagem total de nós visitados pelo algoritmo
+    visited.add(current_node)
+    # Incrementa a referência de contagem total de nós visitados/tocados pelo algoritmo
     visited_count_ref[0] += 1
     
     # Checagem de objetivo
@@ -20,18 +21,20 @@ def dls_recursive(graph, current_node, target_node, limit, path, visited_count_r
     # Controle rigoroso de limite k-hop
     if limit <= 0:
         path.pop()
+        visited.remove(current_node)
         return None
         
     # Expansão para os nós vizinhos
     for neighbor in graph.get_neighbors(current_node):
-        # Evitar loop infinito no caminho atual
-        if neighbor not in path:
-            result = dls_recursive(graph, neighbor, target_node, limit - 1, path, visited_count_ref)
+        # Evitar ciclos e loops redundantes usando o conjunto visited
+        if neighbor not in visited:
+            result = dls_recursive(graph, neighbor, target_node, limit - 1, path, visited, visited_count_ref)
             if result is not None:
                 return result
                 
-    # Backtracking: remove do caminho após explorar todo o subgrafo deste nó
+    # Backtracking: remove do caminho e do conjunto visitados após explorar todo o subgrafo deste nó
     path.pop()
+    visited.remove(current_node)
     return None
 
 def dls(graph, start_node, target_node, k_hop):
@@ -55,8 +58,8 @@ def dls(graph, start_node, target_node, k_hop):
     
     Args:
         graph (Graph): Instância do grafo a ser explorado.
-        start_node (int): Nó de origem inicial.
-        target_node (int): Nó de destino desejado.
+        start_node (str/int): Nó de origem inicial.
+        target_node (str/int): Nó de destino desejado.
         k_hop (int): Limite de saltos da busca.
         
     Returns:
@@ -66,11 +69,13 @@ def dls(graph, start_node, target_node, k_hop):
     
     # path controla o estado das visitas do caminho de recursão
     path = []
+    # visited conjunto para controle de O(1) de visitados e backtracking de ciclo
+    visited = set()
     
-    # Utilizando lista como referência para contagem global nas recursões
+    # Utilizando lista como referência para contagem global de nós tocados
     visited_count_ref = [0] 
     
-    path_found = dls_recursive(graph, start_node, target_node, k_hop, path, visited_count_ref)
+    path_found = dls_recursive(graph, start_node, target_node, k_hop, path, visited, visited_count_ref)
     
     end_time = time.perf_counter()
     execution_time = end_time - start_time
