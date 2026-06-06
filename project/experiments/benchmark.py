@@ -35,7 +35,7 @@ def run_benchmark():
         graph = generate_graph(size, edges_per_node)
         
         # Iniciar no nó de índice 0
-        start_node = f"Entidade_0"
+        target_node = f"Entidade_{size - 1}"
         
         # Em vez de buscar o último nó do mapa inteiro (o que torna a busca impossível para o DLS com limite baixo):
         start_node = "Entidade_0"
@@ -43,15 +43,16 @@ def run_benchmark():
         # Escolha um alvo que force o DLS a explorar até o seu limite máximo de saltos (ex: limit = 4)
         # Se a grade tem tamanho 'grid_size', o nó na coordenada (2,2) está a 4 saltos de distância de (0,0)
         grid_size = int(size ** 0.5)
-        target_node = f"Entidade_{2 * grid_size + 2}" # Nó na posição x=2, y=2 (Exatamente 4 saltos de distância)
-        limit = 4
+        limite_maximo_do_mapa = 2 * (grid_size - 1) # Nó na posição x=2, y=2 
+        
         
         # Configuração de pipelines experimentais
         tests = [
-            ("BFS", lambda: bfs(graph, start_node, target_node)),
+            ("BFS Pior Caso", lambda: bfs(graph, start_node, target_node)),
             ("DLS k=2", lambda: dls(graph, start_node, target_node, 2)),
             ("DLS k=4", lambda: dls(graph, start_node, target_node, 4)),
-            ("DLS k=6", lambda: dls(graph, start_node, target_node, 6))
+            ("DLS k=6", lambda: dls(graph, start_node, target_node, 6)),
+            ("DLS Pior Caso", lambda: dls(graph, start_node, target_node, limite_maximo_do_mapa))
         ]
         
         for name, func in tests:
