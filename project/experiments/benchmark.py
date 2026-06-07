@@ -23,7 +23,7 @@ def run_benchmark():
     """
     
     # Tamanhos base para testar escalabilidade progressiva
-    sizes = [100, 1000, 5000, 10000]
+    sizes = [1, 5, 10, 20, 50, 100, 150, 200, 250]
     edges_per_node = 4 # Define uma certa densidade/ramificação de Knowledge Graph
     
     print("-" * 75)
@@ -31,29 +31,41 @@ def run_benchmark():
     print("-" * 75)
     
     for size in sizes:
-        # Gera o grafo dinâmico para a iteração
+        # Gera o grafo na escala atual
         graph = generate_graph(size, edges_per_node)
         
-        # Iniciar no nó de índice 0
-        target_node = f"Entidade_{size - 1}"
-        
-        # Em vez de buscar o último nó do mapa inteiro (o que torna a busca impossível para o DLS com limite baixo):
         start_node = "Entidade_0"
-
-        # Escolha um alvo que force o DLS a explorar até o seu limite máximo de saltos (ex: limit = 4)
-        # Se a grade tem tamanho 'grid_size', o nó na coordenada (2,2) está a 4 saltos de distância de (0,0)
-        grid_size = int(size ** 0.5)
-        limite_maximo_do_mapa = 2 * (grid_size - 1) # Nó na posição x=2, y=2 
         
+        # Define o 'k' (quantidade de saltos) que você quer testar nesta rodada.
+        # Podemos ligar o 'k' ao tamanho do mapa para testar distâncias cada vez maiores.
+        grid_width = int(size ** 0.5)
         
-        # Configuração de pipelines experimentais
+        # Define o k dinâmico como a distância máxima aproximada do mapa
+        k_desejado = 2 * (grid_width - 1) 
+        
+        # Calcula as coordenadas (x, y) para dar exatamente 'k' saltos
+        x = k_desejado // 2
+        y = k_desejado - x
+        
+        # Converte as coordenadas (x, y) no ID de string que o seu gerador usa
+        id_alvo_geometrico = (y * grid_width) + x
+        target_node = f"Entidade_{id_alvo_geometrico}"
+        
+        # PIOR CASO ABSOLUTO: Alvo na ponta extrema oposta da grade
+        target_node_pior_caso = f"Entidade_{size - 1}"
+        
+        print(f"\n[CONFIG] Rodada de {size} nós | Alvo posicionado a {k_desejado} saltos de distância.")
+        
+        # Configuração de pipelines experimentais usando o MESMO k para todos
         tests = [
-            ("BFS Pior Caso", lambda: bfs(graph, start_node, target_node)),
-            ("DLS k=2", lambda: dls(graph, start_node, target_node, 2)),
-            ("DLS k=4", lambda: dls(graph, start_node, target_node, 4)),
-            ("DLS k=6", lambda: dls(graph, start_node, target_node, 6)),
-            ("DLS Pior Caso", lambda: dls(graph, start_node, target_node, limite_maximo_do_mapa))
+            (f"BFS (Alvo k={k_desejado})", lambda: bfs(graph, start_node, target_node)),
+            ("BFS Pior Caso", lambda: bfs(graph, start_node, target_node_pior_caso)),
+            (f"DLS k={k_desejado}", lambda: dls(graph, start_node, target_node, k_desejado))
         ]
+
+        # O DLS Pior Caso com limite aberto (backtracking exaustivo) só entra em grafos pequenos
+        if size <= 1000:
+            tests.append(("DLS Pior Caso", lambda: dls(graph, start_node, target_node, k_desejado + 10)))
         
         for name, func in tests:
             # Rastrear alocação de memória (tracemalloc da lib padrão do Python)
