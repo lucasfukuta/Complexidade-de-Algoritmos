@@ -61,7 +61,7 @@ project/
 
 ## Como Executar
 
-O projeto foi desenvolvido utilizando exclusivamente a biblioteca padrão do **Python 3.x**, pelo que não é necessária a instalação de nenhuma dependência externa (como `pip`).
+O projeto foi desenvolvido utilizando exclusivamente a biblioteca padrão do **Python 3.14.5**, pelo que não é necessária a instalação de nenhuma dependência externa (como `pip`).
 
 ### 1. Execução Completa (Via `main.py`)
 Para ver a introdução académica e correr a suite de testes padrão configurada no fluxo principal, basta executar a partir da raiz do projeto:
