@@ -23,7 +23,7 @@ def run_benchmark():
     """
     
     # Tamanhos base para testar escalabilidade progressiva
-    sizes = [1, 5, 10, 20, 50, 100, 150, 200, 250]
+    sizes = [4, 9, 16, 25, 49, 100, 144, 196, 225, 256]
     edges_per_node = 4 # Define uma certa densidade/ramificação de Knowledge Graph
     
     print("-" * 75)
@@ -31,41 +31,56 @@ def run_benchmark():
     print("-" * 75)
     
     for size in sizes:
-        # Gera o grafo na escala atual
+        if size < 1:
+            continue
+            
         graph = generate_graph(size, edges_per_node)
-        
         start_node = "Entidade_0"
         
-        # Define o 'k' (quantidade de saltos) que você quer testar nesta rodada.
-        # Podemos ligar o 'k' ao tamanho do mapa para testar distâncias cada vez maiores.
+        # Largura da grade quadrada perfeita
         grid_width = int(size ** 0.5)
         
-        # Define o k dinâmico como a distância máxima aproximada do mapa
-        k_desejado = 2 * (grid_width - 1) 
+        # ======================================================================
+        # 1. CASO MÉDIO LOCAL (Metade da distância máxima da diagonal)
+        # ======================================================================
+        # Dividimos por 2 para o alvo ficar no meio do mapa, simulando um contexto local
+        k_desejado = grid_width - 1 
+        if k_desejado < 1: 
+            k_desejado = 1 # Evita k=0 para o grafo de 4 nós
         
-        # Calcula as coordenadas (x, y) para dar exatamente 'k' saltos
         x = k_desejado // 2
         y = k_desejado - x
-        
-        # Converte as coordenadas (x, y) no ID de string que o seu gerador usa
         id_alvo_geometrico = (y * grid_width) + x
-        target_node = f"Entidade_{id_alvo_geometrico}"
+        target_node_local = f"Entidade_{id_alvo_geometrico}"
         
-        # PIOR CASO ABSOLUTO: Alvo na ponta extrema oposta da grade
+        # ======================================================================
+        # 2. PIOR CASO ABSOLUTO (Mantido no extremo oposto da diagonal)
+        # ======================================================================
         target_node_pior_caso = f"Entidade_{size - 1}"
         
-        print(f"\n[CONFIG] Rodada de {size} nós | Alvo posicionado a {k_desejado} saltos de distância.")
+        # Calcula a distância de Manhattan real até o pior caso para o DLS usar
+        k_pior_caso = 2 * (grid_width - 1)
         
-        # Configuração de pipelines experimentais usando o MESMO k para todos
+        print(f"\n[CONFIG] Rodada de {size} nós | Caso Local a {k_desejado} saltos.")
+        print(f"[CONFIG] Pior Caso cravado no limite do Grafo: {target_node_pior_caso} (Distância: {k_pior_caso} saltos)")
+        
+        # ======================================================================
+        # 3. PIPELINES EXPERIMENTAIS 
+        # ======================================================================
         tests = [
-            (f"BFS (Alvo k={k_desejado})", lambda: bfs(graph, start_node, target_node)),
-            ("BFS Pior Caso", lambda: bfs(graph, start_node, target_node_pior_caso)),
-            (f"DLS k={k_desejado}", lambda: dls(graph, start_node, target_node, k_desejado))
+            # Busca Local (O BFS deve parar cedo aqui!)
+            ("BFS Local", lambda: bfs(graph, start_node, target_node_local)),
+            (f"DLS k={k_desejado}", lambda: dls(graph, start_node, target_node_local, k_desejado)),
+            
+            # Pior Caso Global (O BFS vai varrer o mapa inteiro até o final)
+            ("BFS Pior Caso", lambda: bfs(graph, start_node, target_node_pior_caso))
         ]
 
-        # O DLS Pior Caso com limite aberto (backtracking exaustivo) só entra em grafos pequenos
-        if size <= 1000:
-            tests.append(("DLS Pior Caso", lambda: dls(graph, start_node, target_node, k_desejado + 10)))
+        # O DLS Pior Caso busca o alvo do extremo oposto com limite aberto
+        if size <= 300:
+            # Damos uma folga acima da distância máxima para o backtracking explodir
+            limite_pior_caso = k_pior_caso + 5
+            tests.append(("DLS Pior Caso", lambda: dls(graph, start_node, target_node_pior_caso, limite_pior_caso)))
         
         for name, func in tests:
             # Rastrear alocação de memória (tracemalloc da lib padrão do Python)
